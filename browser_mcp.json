@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "airbnb": {
+      "command": "npx",
+      "args": ["-y", "@openbnb/mcp-server-airbnb"]
+    },
+    "duckduckgo-search": {
+      "command": "npx",
+      "args": ["-y", "duckduckgo-mcp-server"]
+    },
+    "file-system": {
+      "command": "python",
+      "args": ["-m", "mcp_server_filesystem"]
+    },
+      "weather": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@open-meteo/mcp-server-weather"
+      ],
+      "env": {
+        "OPEN_METEO_API_URL": "https://api.open-meteo.com/v1/forecast"
+      }
+    }
+  }
+}
