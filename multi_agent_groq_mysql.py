@@ -8,12 +8,13 @@ Multi-Source AI Agent using LangChain + Groq + MySQL
 
 import os
 from dotenv import load_dotenv
-from langchain_community.chat_models import ChatGroq
+from langchain_groq import ChatGroq
 from langchain_community.utilities.sql_database import SQLDatabase
 from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
-from langchain.agents import create_sql_agent, AgentExecutor
-from langchain.agents.agent_types import AgentType
+from langchain_community.agent_toolkits.sql.base import create_sql_agent
+
 import PyPDF2
+
 
 
 def load_env():
@@ -58,28 +59,27 @@ def setup_database(env: dict) -> SQLDatabase:
 def setup_groq(env: dict):
     """Initialize the Groq LLM."""
     return ChatGroq(
-        model="llama3-70b-8192",  # You can also try "mixtral-8x7b"
+        model_name = "llama-3.1-8b-instant",
         temperature=0,
         groq_api_key=env["GROQ_API_KEY"]
     )
 
 
-def create_sql_agent_executor(db: SQLDatabase, llm) -> AgentExecutor:
+def create_sql_agent_executor(db: SQLDatabase, llm):
     """Create a LangChain SQL agent that understands natural language questions."""
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
     agent_executor = create_sql_agent(
         llm=llm,
         toolkit=toolkit,
-        verbose=True,
-        agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION
+        verbose=True
     )
     return agent_executor
 
 
-def query_database(agent_executor: AgentExecutor, question: str) -> str:
+def query_database(agent_executor, question: str) -> str:
     """Ask the agent a question; it generates SQL and executes it."""
     try:
-        return agent_executor.run(question)
+        return agent_executor.invoke({"input": question})
     except Exception as e:
         return f"[Database query error] {str(e)}"
 
@@ -110,6 +110,7 @@ def main():
     pdf_text = extract_text_from_pdf(env["PDF_FILE_PATH"])
     print(f"✅ Extracted {len(pdf_text)} characters from PDF.\n")
 
+
     # Step 3: Connect MySQL database
     print("🛢️ Connecting to MySQL database...")
     db = setup_database(env)
@@ -133,11 +134,12 @@ def main():
     db_answer = query_database(agent_executor, user_question)
     print("✅ Database answer:\n", db_answer, "\n")
 
-    # Step 8: Summarize both
+    # # Step 8: Summarize both
     print("🧠 Generating combined summary using Groq...")
     summary = summarise_with_groq(llm, pdf_text, db_answer, user_question)
     print("\n================ FINAL SUMMARY ================\n")
     print(summary)
+    # print(pdf_text)
     print("\n===============================================")
 
 

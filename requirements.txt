@@ -1,0 +1,20 @@
+# Core LangChain framework
+langchain==0.3.27
+
+# Community integrations (SQL toolkit etc.)
+langchain-community==0.3.27
+
+# Groq integration for LangChain
+langchain-groq==0.3.8
+
+# groq SDK (must be >=0.30.0 because langchain-groq requires that)
+groq>=0.30.0
+
+# MySQL connector for Python
+mysql-connector-python==9.4.0
+
+# PDF text extraction library
+PyPDF2==3.0.0
+
+# Environment variable support (.env)
+python-dotenv==1.0.0
