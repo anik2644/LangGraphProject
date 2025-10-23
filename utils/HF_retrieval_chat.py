@@ -8,7 +8,7 @@ from langchain_core.output_parsers import StrOutputParser
 import PyPDF2
 import os
 from dotenv import load_dotenv
-from huggingface_llm import setup_huggingface_llm  # ✅ import your new LLM module
+from utils.huggingface_llm import setup_huggingface_llm  # ✅ import your new LLM module
 
 
 # =============== Load Environment ===============
