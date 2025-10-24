@@ -1,24 +1,26 @@
 """
-LangGraph-Based Combined Vector DB + PDF QA Summarizer
--------------------------------------------------------
+LangGraph-Based Local Combined Vector DB + PDF QA Summarizer
+------------------------------------------------------------
+✅ No external API required (runs fully offline)
 ✅ Loads existing FAISS vector DB
 ✅ Extracts context from PDF
 ✅ Retrieves answers from both sources
-✅ Uses Groq LLM (LLaMA-3.1-8B) for unified summarized answer
+✅ Uses local HuggingFace LLM (e.g. TinyLlama, Mistral)
 """
 
 import os
 from dotenv import load_dotenv
 import PyPDF2
-
 from langgraph.graph import StateGraph, END
-from langchain_groq import ChatGroq
+
+# Local replacements
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_huggingface import HuggingFacePipeline
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-
+from transformers import pipeline
 
 # ======================================================
 # 1. ENVIRONMENT
@@ -26,21 +28,26 @@ from langchain_core.output_parsers import StrOutputParser
 def load_env():
     load_dotenv()
     return {
-        "GROQ_API_KEY": os.getenv("GROQ_API_KEY"),
         "VECTOR_DB_PATH": os.getenv("VECTOR_DB_PATH", "vector_store/faiss_index"),
         "PDF_FILE_PATH": os.getenv("PDF_FILE_PATH"),
     }
 
 
 # ======================================================
-# 2. LLM INITIALIZATION
+# 2. LOCAL LLM INITIALIZATION
 # ======================================================
-def setup_groq(env):
-    return ChatGroq(
-        model="llama-3.1-8b-instant",
-        groq_api_key=env["GROQ_API_KEY"],
-        temperature=0.2,
+def setup_local_llm():
+    print("🧠 Loading local LLM pipeline (TinyLlama)...")
+    pipe = pipeline(
+        "text-generation",
+        model="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        max_new_tokens=512,
+        temperature=0.3,
+        do_sample=True,
     )
+    llm = HuggingFacePipeline(pipeline=pipe)
+    print("✅ Local model loaded.")
+    return llm
 
 
 # ======================================================
@@ -110,7 +117,7 @@ def answer_from_vector_node(state: QAState, llm):
     print("🤖 Generating answer from Vector DB context...")
     prompt = f"Answer using only this context:\n{state['db_context']}\n\nQuestion: {state['query']}"
     response = llm.invoke(prompt)
-    state["db_answer"] = response.content.strip()
+    state["db_answer"] = response.strip()
     return state
 
 
@@ -118,14 +125,14 @@ def answer_from_pdf_node(state: QAState, llm):
     print("🤖 Generating answer from PDF context...")
     prompt = f"Answer using only this context:\n{state['pdf_context']}\n\nQuestion: {state['query']}"
     response = llm.invoke(prompt)
-    state["pdf_answer"] = response.content.strip()
+    state["pdf_answer"] = response.strip()
     return state
 
 
 def summarize_node(state: QAState, llm):
     print("🧠 Summarizing combined answers...")
     prompt_text = f"""
-    You are a research summarizer AI.
+    You are a summarizer AI.
 
     User Question:
     {state['query']}
@@ -137,12 +144,12 @@ def summarize_node(state: QAState, llm):
     {state['pdf_answer']}
 
     Task:
-    Merge the two answers into one concise, well-structured summary.
-    If contradictions exist, note them clearly.
+    Merge both answers into one concise, well-structured summary.
+    Highlight contradictions clearly if present.
     """
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a helpful summarizer."),
+        ("system", "You are a concise summarizer."),
         ("human", prompt_text)
     ])
 
@@ -161,7 +168,7 @@ def summarize_node(state: QAState, llm):
 # ======================================================
 def main():
     env = load_env()
-    llm = setup_groq(env)
+    llm = setup_local_llm()
     vectorstore = load_vector_db(env)
     pdf_text = extract_text_from_pdf(env["PDF_FILE_PATH"])
     pdf_retriever = setup_pdf_retriever(pdf_text)
@@ -184,13 +191,11 @@ def main():
 
     workflow = graph.compile()
 
-    # 🧠 Interactive loop
     while True:
         query = input("\n🔹 Ask a question (or type 'exit'): ").strip()
         if query.lower() == "exit":
             print("👋 Goodbye!")
             break
-
         init_state = {"query": query}
         workflow.invoke(init_state)
 
