@@ -65,6 +65,7 @@ def retrieve_pdf_node(state: QAState, pdf_retriever):
     print("📘 Retrieving from PDF...")
     docs = pdf_retriever.invoke(state["query"])
     state["pdf_context"] = "\n\n".join([d.page_content for d in docs])
+    print(state)
     return state
 
 def answer_from_pdf_node(state: QAState, llm):

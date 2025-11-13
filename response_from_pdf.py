@@ -75,9 +75,10 @@ def main():
     print("📘 Extracting PDF...")
     pdf_text = extract_text_from_pdf(env["PDF_FILE_PATH"])
     print(f"✅ Extracted {len(pdf_text)} characters.")
+    retriever = setup_retriever(pdf_text)
 
     llm = setup_groq(env)
-    retriever = setup_retriever(pdf_text)
+
     chain = setup_retrieval_pipeline(llm, retriever)
 
     while True:
